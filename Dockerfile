@@ -1,8 +1,8 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Явно указываем прокси и отключаем IPv6
-ARG GOPROXY=https://goproxy.cn,direct
-ENV GOSUMDB=off
+# ARG GOPROXY=https://goproxy.cn,direct
+# ENV GOSUMDB=off
 
 WORKDIR /app
 COPY go.mod go.sum ./

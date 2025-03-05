@@ -1,22 +1,13 @@
-version: '3.8'
-
 services:
   app:
-    build: 
-      context: .
-      args:
-        - GOPROXY=https://goproxy.cn,direct  # Используем китайское зеркало
+    build: ./
     ports:
       - "8080:8080"
     environment:
       - DATABASE_URL=postgres://postgres:parol@db:5432/main
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
     depends_on:
       db:
         condition: service_healthy
-    restart: on-failure
 
   db:
     image: postgres:15-alpine

@@ -1,4 +1,4 @@
-module github.com/Dikobrazzzz/Crypto
+module crypto
 
 go 1.23
 

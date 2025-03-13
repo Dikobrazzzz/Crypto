@@ -1,65 +1,47 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 	"context"
 	"os"
 	"log/slog"
-	"crypto/internal/handler" 
-    "crypto/internal/storage" 
+
+	"crypto/internal/app"
+	"crypto/internal/handler"
+	"crypto/migrations"
+	"crypto/internal/repository"
+	"crypto/internal/storage"
+	usecase "crypto/internal/usecase"
 )
 
-var (
-	conn 	*pgx.Conn
-	cb = context.Background()
-)
-
-type Address struct {
-	ID            uint64 `json:"id"`
-	WalletAddress string `json:"wallet_address"`
-	ChainName     string `json:"chain_name"`
-	CryptoName    string `json:"crypto_name"`
-	Tag           string `json:"tag"`
-	Balance       int    `json:"balance"`
-}
-
-type AddressRequest struct {
-	WalletAddress 	string `json:"wallet_address" binding:"required"`
-	ChainName 		string `json:"chain_name" binding:"required"`
-	CryptoName 		string `json:"crypto_name" binding:"required"`
-	Tag 			string `json:"tag" binding:"required"`
-}
-
-type TagUpdateRequest struct {
-	ID 	uint64 `json:"id"`
-	Tag string `json:"tag"`
-}
-
-func init() {
+func loggerinit() {
     slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
         Level: slog.LevelDebug,
     })))
 }
 
 func main() {
+
+	dbURL := "postgres://postgres:postgres@postgres:5432"
+	if err := migrate.Migrate(dbURL); err != nil {
+        slog.Error("Migration failed", "error", err)
+        os.Exit(1)
+    }
 	
-	conn,err := storage.GetConnection(cb)
-	if err != nil {
-		slog.Error("Database connection failed", "error", err)
-		return
+	ctx := context.Background()
+	conn, err := storage.GetConnection(ctx)
+    if err != nil {
+        slog.Error("Error getting connection", "error", err)
+        return
+    }
+    defer conn.Close(ctx)
+
+	walletRepo := repository.NewWalletProvider(conn)
+	walletUC := usecase.NewWalletProvider(walletRepo)
+	handle := handler.New(walletUC)
+
+	router:= app.GetRouter(handle)
+
+	if err:= router.Run(); err != nil {
+		slog.Error("Error","error", err)
 	}
-	
-	defer conn.Close(cb)
-
-	h := handler.New(conn, cb)
-
-	r := gin.Default()
-
-	r.POST("/address", h.CreateAddressHandler)
-	r.GET("/address/:id", h.GetIdHandler)
-	r.GET("/allwallets", h.GetAllWalletsHandler)
-	r.PUT("/address/tag", h.EditTagHandler)
-
-	r.Run()
 }

@@ -6,16 +6,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"context"
 )
-	
-var (
-	conn *pgx.Conn
-)
 
-func GetConnection(cb context.Context) (*pgx.Conn, error) {
-	c, err := pgx.Connect(cb, os.Getenv("DATABASE_URL"))
+func GetConnection(ctx context.Context) (*pgx.Conn, error) {
+	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
 		slog.Error("DB connection error", "error", err)
 		return nil, err
 	}
-	return c, nil
+	return conn, nil
 }

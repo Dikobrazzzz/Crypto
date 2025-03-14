@@ -21,7 +21,7 @@ func loggerinit() {
 
 func main() {
 
-	dbURL := "postgres://postgres:postgres@postgres:5432"
+	dbURL := "postgres://postgres:postgres@localhost:5432"
 	if err := migrate.Migrate(dbURL); err != nil {
         slog.Error("Migration failed", "error", err)
         os.Exit(1)

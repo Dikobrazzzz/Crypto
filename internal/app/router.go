@@ -1,10 +1,10 @@
 package app
 
 import (
-	"github.com/gin-gonic/gin"
 	"crypto/internal/handler"
-)
 
+	"github.com/gin-gonic/gin"
+)
 
 func GetRouter(h *handler.Handler) *gin.Engine {
 	router := gin.Default()

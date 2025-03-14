@@ -1,15 +1,16 @@
-package migrate
+package database
 
 import (
 	"database/sql"
 	"embed"
 	"log/slog"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
 )
 
-//go:embed *.sql
+//go:embed migrations/*.sql
 var migrations embed.FS
 
 func Migrate(url string) error {

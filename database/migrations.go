@@ -1,8 +1,9 @@
-package database
+package migrations
 
 import (
 	"database/sql"
 	"embed"
+	"fmt"
 	"log/slog"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -15,6 +16,7 @@ var migrations embed.FS
 
 func Migrate(url string) error {
 	db, err := sql.Open("pgx", url)
+	fmt.Println(url)
 	if err != nil {
 		return errors.Wrap(err, "cannot connect to db")
 	}

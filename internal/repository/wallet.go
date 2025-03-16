@@ -2,31 +2,33 @@ package repository
 
 import (
 	"context"
+	"crypto/internal/apperr"
 	"crypto/internal/models"
-	"database/sql"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pkg/errors"
 )
 
 type WalletRepo struct {
-	conn *pgx.Conn
+	pool *pgxpool.Pool
 }
 
-func NewWalletProvider(conn *pgx.Conn) *WalletRepo {
-	return &WalletRepo{conn: conn}
+func NewWalletProvider(pool *pgxpool.Pool) *WalletRepo {
+	return &WalletRepo{pool: pool}
 }
 
 func (w *WalletRepo) CreateAddress(ctx context.Context, req *models.AddressRequest) (*models.Address, error) {
 
 	insertSQL := `
-    INSERT INTO main (wallet_address, chain_name, crypto_name, tag, balance)
+    INSERT INTO wallet (wallet_address, chain_name, crypto_name, tag, balance)
     VALUES ($1, $2, $3, $4, $5)
     RETURNING id;
     `
 
 	var newID uint64
-	err := w.conn.QueryRow(ctx, insertSQL,
+	err := w.pool.QueryRow(ctx, insertSQL,
 		req.WalletAddress, req.ChainName, req.CryptoName, req.Tag, 0,
 	).Scan(&newID)
 	if err != nil {
@@ -44,16 +46,16 @@ func (w *WalletRepo) CreateAddress(ctx context.Context, req *models.AddressReque
 	}, nil
 }
 
-func (w *WalletRepo) GetId(ctx context.Context, id uint64) (*models.Address, error) {
+func (w *WalletRepo) GetID(ctx context.Context, id uint64) (*models.Address, error) {
 
 	var addr models.Address
 
 	query := `
 		SELECT id, wallet_address, chain_name, crypto_name, tag, balance
-		FROM main 
+		FROM wallet 
 		WHERE id = $1
 	`
-	err := w.conn.QueryRow(ctx, query, id).Scan(
+	err := w.pool.QueryRow(ctx, query, id).Scan(
 		&addr.ID,
 		&addr.WalletAddress,
 		&addr.ChainName,
@@ -61,10 +63,11 @@ func (w *WalletRepo) GetId(ctx context.Context, id uint64) (*models.Address, err
 		&addr.Tag,
 		&addr.Balance,
 	)
+
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			slog.Error("No rows found", "error", err)
-			return nil, err
+			return nil, apperr.ErrNotFound
 		}
 		slog.Error("QueryRow failed", "error", err)
 		return nil, err
@@ -77,13 +80,13 @@ func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error
 
 	query := `
 		SELECT id, wallet_address, chain_name, crypto_name, tag, balance
-		FROM main
+		FROM wallet
 	`
 
-	rows, err := w.conn.Query(ctx, query)
+	rows, err := w.pool.Query(ctx, query)
 	if err != nil {
 		slog.Error("Query failed", "error", err)
-		return nil, err
+		return nil, errors.Wrap(err, "GetAllWallets Query")
 	}
 	defer rows.Close()
 
@@ -115,12 +118,12 @@ func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error
 func (w *WalletRepo) EditTag(ctx context.Context, req *models.TagUpdateRequest) error {
 
 	query := `
-        UPDATE main
+        UPDATE wallet
         SET tag = $1
         WHERE id = $2
     `
 
-	result, err := w.conn.Exec(ctx, query, req.Tag, req.ID)
+	result, err := w.pool.Exec(ctx, query, req.Tag, req.ID)
 	if err != nil {
 		slog.Error("Update failed", "error", err)
 		return err

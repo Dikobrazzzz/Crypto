@@ -5,38 +5,42 @@ import (
 	"log/slog"
 	"os"
 
-	migrate "crypto/database"
+	"crypto/config"
+	migrations "crypto/database"
 	"crypto/internal/app"
+	"crypto/internal/cache"
 	"crypto/internal/handler"
 	"crypto/internal/repository"
 	"crypto/internal/storage"
-	usecase "crypto/internal/usecase"
+	"crypto/internal/usecase"
 )
 
 func loggerinit() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level:     slog.LevelDebug,
+		AddSource: true,
 	})))
 }
 
 func main() {
-
-	dbURL := "postgres://postgres:postgres@localhost:5432"
-	if err := migrate.Migrate(dbURL); err != nil {
+	config.Init()
+	dbURL := config.AppConfig.DatabaseURL
+	if err := migrations.Migrate(dbURL); err != nil {
 		slog.Error("Migration failed", "error", err)
 		os.Exit(1)
 	}
 
 	ctx := context.Background()
-	conn, err := storage.GetConnection(ctx)
+	pool, err := storage.GetConnection(ctx, "postgres://postgres:postgres@db:5432/postgres")
 	if err != nil {
 		slog.Error("Error getting connection", "error", err)
 		return
 	}
-	defer conn.Close(ctx)
+	defer pool.Close()
 
-	walletRepo := repository.NewWalletProvider(conn)
-	walletUC := usecase.NewWalletProvider(walletRepo)
+	walletRepo := repository.NewWalletProvider(pool)
+	cacheDecorator := cache.CacheNewDecorator(walletRepo)
+	walletUC := usecase.NewWalletProvider(cacheDecorator)
 	handle := handler.New(walletUC)
 
 	router := app.GetRouter(handle)

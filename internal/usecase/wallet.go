@@ -1,37 +1,37 @@
-package interfaces
+package usecase
 
 import (
 	"context"
+	"crypto/internal/cache"
 	"crypto/internal/models"
-	"crypto/internal/repository"
 )
 
 type WalletUsecase struct {
-	WalletRepo repository.WalletProvider
+	WalletCache cache.WalletProvider
 }
 
-func NewWalletProvider(repo repository.WalletProvider) *WalletUsecase {
+func NewWalletProvider(cache cache.WalletProvider) *WalletUsecase {
 	return &WalletUsecase{
-		WalletRepo: repo,
+		WalletCache: cache,
 	}
 }
 
 func (w *WalletUsecase) CreateAddress(ctx context.Context, req *models.AddressRequest) (*models.Address, error) {
 
-	return w.WalletRepo.CreateAddress(ctx, req)
+	return w.WalletCache.CreateAddress(ctx, req)
 }
 
-func (w *WalletUsecase) GetId(ctx context.Context, id uint64) (*models.Address, error) {
+func (w *WalletUsecase) GetID(ctx context.Context, id uint64) (*models.Address, error) {
 
-	return w.WalletRepo.GetId(ctx, id)
+	return w.WalletCache.GetID(ctx, id)
 }
 
 func (w *WalletUsecase) GetAllWallets(ctx context.Context) ([]models.Address, error) {
 
-	return w.WalletRepo.GetAllWallets(ctx)
+	return w.WalletCache.GetAllWallets(ctx)
 }
 
 func (w *WalletUsecase) EditTag(ctx context.Context, req *models.TagUpdateRequest) error {
 
-	return w.WalletRepo.EditTag(ctx, req)
+	return w.WalletCache.EditTag(ctx, req)
 }

@@ -17,7 +17,7 @@ import (
 
 func loggerinit() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		Level:     slog.LevelDebug,
+		Level:     config.AppConfig.Level,
 		AddSource: true,
 	})))
 }

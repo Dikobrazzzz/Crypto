@@ -80,19 +80,7 @@ func (c *CacheDecorator) GetID(ctx context.Context, id uint64) (*models.Address,
 }
 
 func (c *CacheDecorator) GetAllWallets(ctx context.Context) ([]models.Address, error) {
-	if c.allWalletsCached {
-		return c.allWallets, nil
-	}
-
-	wallets, err := c.walletRepo.GetAllWallets(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	c.allWallets = wallets
-	c.allWalletsCached = true
-
-	return wallets, nil
+	return c.walletRepo.GetAllWallets(ctx)
 }
 
 func (c *CacheDecorator) EditTag(ctx context.Context, req *models.TagUpdateRequest) error {

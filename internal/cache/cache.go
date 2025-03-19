@@ -6,6 +6,8 @@ import (
 	"crypto/internal/repository"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type wrapWallet struct {
@@ -15,25 +17,27 @@ type wrapWallet struct {
 
 type CacheDecorator struct {
 	walletRepo       repository.WalletProvider
-	wallets          map[uint64]wrapWallet
 	allWallets       []models.Address
 	allWalletsCached bool
-	mu               sync.Mutex
-	ttl              time.Duration
+
+	mu      sync.RWMutex
+	wallets map[uint64]wrapWallet
+	ttl     time.Duration
 }
 
-func CacheNewDecorator(repo repository.WalletProvider) *CacheDecorator {
-	c := &CacheDecorator{
+func CacheNewDecorator(repo repository.WalletProvider, ttl time.Duration) *CacheDecorator {
+	return &CacheDecorator{
 		walletRepo:       repo,
 		wallets:          make(map[uint64]wrapWallet),
 		allWallets:       []models.Address{},
 		allWalletsCached: false,
 		ttl:              5 * time.Minute,
 	}
-	return c
 }
 
 func (c *CacheDecorator) Get(id uint64) (*models.Address, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	wallet, ok := c.wallets[id]
 
 	return wallet.wallet, ok
@@ -52,12 +56,12 @@ func (c *CacheDecorator) Set(wallet *models.Address) {
 func (c *CacheDecorator) CreateAddress(ctx context.Context, req *models.AddressRequest) (*models.Address, error) {
 	wallet, err := c.walletRepo.CreateAddress(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "The operation cannot be preformed")
 	}
 
 	c.Set(wallet)
 
-	return wallet, err
+	return wallet, nil
 }
 
 func (c *CacheDecorator) GetID(ctx context.Context, id uint64) (*models.Address, error) {
@@ -92,8 +96,7 @@ func (c *CacheDecorator) GetAllWallets(ctx context.Context) ([]models.Address, e
 }
 
 func (c *CacheDecorator) EditTag(ctx context.Context, req *models.TagUpdateRequest) error {
-	err := c.walletRepo.EditTag(ctx, req)
-	if err != nil {
+	if err := c.walletRepo.EditTag(ctx, req); err != nil {
 		return err
 	}
 
@@ -130,4 +133,20 @@ func (c *CacheDecorator) StartCleaner(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+// текущее количество элементов в кеше.
+func (c *CacheDecorator) Size() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return len(c.wallets)
+}
+
+// «вес» кеша.
+// В данном упрощённом примере — просто Size() * 256 байт
+func (c *CacheDecorator) MemoryUsage() int64 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	const approximateBytesPerWallet = 256
+	return int64(len(c.wallets)) * approximateBytesPerWallet
 }

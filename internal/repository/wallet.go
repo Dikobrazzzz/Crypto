@@ -66,7 +66,7 @@ func (w *WalletRepo) GetID(ctx context.Context, id uint64) (*models.Address, err
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			slog.Error("No rows found", "error", err)
+			errors.Is(err, pgx.ErrNoRows)
 			return nil, apperr.ErrNotFound
 		}
 		slog.Error("QueryRow failed", "error", err)

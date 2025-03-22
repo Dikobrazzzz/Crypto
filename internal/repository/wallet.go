@@ -65,12 +65,9 @@ func (w *WalletRepo) GetID(ctx context.Context, id uint64) (*models.Address, err
 	)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			errors.Is(err, pgx.ErrNoRows)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apperr.ErrNotFound
 		}
-		slog.Error("QueryRow failed", "error", err)
-		return nil, err
 	}
 	return &addr, nil
 
@@ -101,7 +98,7 @@ func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error
 			&addr.Tag,
 			&addr.Balance,
 		); err != nil {
-			slog.Error("Row scan failed", "error", err)
+			slog.Error("Rows scan error", "error", err)
 			return nil, err
 		}
 		list = append(list, addr)

@@ -24,14 +24,13 @@ func loggerinit() {
 
 func main() {
 	config.Init()
-	dbURL := config.AppConfig.DatabaseURL
-	if err := database.Migrate(dbURL); err != nil {
+	if err := database.Migrate(config.AppConfig.DatabaseURL); err != nil {
 		slog.Error("Migration failed", "error", err)
 		os.Exit(1)
 	}
 
 	ctx := context.Background()
-	pool, err := storage.GetConnection(ctx, "postgres://postgres:postgres@db:5432/postgres")
+	pool, err := storage.GetConnection(ctx, config.AppConfig.DatabaseURL)
 	if err != nil {
 		slog.Error("Error getting connection", "error", err)
 		return

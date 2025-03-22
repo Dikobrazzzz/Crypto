@@ -13,6 +13,7 @@ import (
 type wrapWallet struct {
 	wallet *models.Address
 	expiry time.Time
+	size   int64
 }
 
 type CacheDecorator struct {
@@ -31,32 +32,35 @@ func CacheNewDecorator(repo repository.WalletProvider, ttl time.Duration) *Cache
 		wallets:          make(map[uint64]wrapWallet),
 		allWallets:       []models.Address{},
 		allWalletsCached: false,
-		ttl:              5 * time.Minute,
+		ttl:              ttl,
 	}
 }
 
 func (c *CacheDecorator) Get(id uint64) (*models.Address, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	wallet, ok := c.wallets[id]
 
 	return wallet.wallet, ok
 }
 
 func (c *CacheDecorator) Set(wallet *models.Address) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	walletSize := SizeCache(wallet)
 
 	c.wallets[wallet.ID] = wrapWallet{
 		wallet: wallet,
 		expiry: time.Now().Add(c.ttl),
+		size:   walletSize,
 	}
 }
 
 func (c *CacheDecorator) CreateAddress(ctx context.Context, req *models.AddressRequest) (*models.Address, error) {
 	wallet, err := c.walletRepo.CreateAddress(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "The operation cannot be preformed")
+		return nil, errors.Wrap(err, "The operation cannot be performed")
 	}
 
 	c.Set(wallet)
@@ -72,7 +76,7 @@ func (c *CacheDecorator) GetID(ctx context.Context, id uint64) (*models.Address,
 	wallet, err := c.walletRepo.GetID(ctx, id)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to get wallet by id")
 	}
 
 	c.Set(wallet)
@@ -85,7 +89,7 @@ func (c *CacheDecorator) GetAllWallets(ctx context.Context) ([]models.Address, e
 
 func (c *CacheDecorator) EditTag(ctx context.Context, req *models.TagUpdateRequest) error {
 	if err := c.walletRepo.EditTag(ctx, req); err != nil {
-		return err
+		return errors.Wrap(err, "Failed to edit tag")
 	}
 
 	if cachedAddr, ok := c.Get(req.ID); ok {
@@ -97,8 +101,8 @@ func (c *CacheDecorator) EditTag(ctx context.Context, req *models.TagUpdateReque
 }
 
 func (c *CacheDecorator) removeExpired() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	now := time.Now()
 	for id, w := range c.wallets {
@@ -123,18 +127,31 @@ func (c *CacheDecorator) StartCleaner(ctx context.Context) {
 	}()
 }
 
-// текущее количество элементов в кеше.
 func (c *CacheDecorator) Size() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return len(c.wallets)
 }
 
-// «вес» кеша.
-// В данном упрощённом примере — просто Size() * 256 байт
 func (c *CacheDecorator) MemoryUsage() int64 {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	const approximateBytesPerWallet = 256
-	return int64(len(c.wallets)) * approximateBytesPerWallet
+
+	var totalsize int64
+	for _, w := range c.wallets {
+		totalsize += w.size
+	}
+	return totalsize
+}
+
+func SizeCache(w *models.Address) int64 {
+	var size int64
+
+	size += 4
+	size += int64(len(w.WalletAddress))
+	size += int64(len(w.ChainName))
+	size += int64(len(w.CryptoName))
+	size += int64(len(w.Tag))
+	size += 16
+	return size
 }

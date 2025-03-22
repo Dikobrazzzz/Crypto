@@ -2,4 +2,4 @@ package apperr
 
 import "errors"
 
-var ErrNotFound = errors.New("not found")
+var ErrNotFound = errors.New("rows not found")

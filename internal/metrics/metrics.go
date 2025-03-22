@@ -1,12 +1,11 @@
 package metrics
 
 import (
-	"log/slog" // Подключаем пакет slog из стандартной библиотеки
+	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
-	"crypto/internal/cache" // замените на ваш корректный import-путь
+	"crypto/internal/cache"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -29,38 +28,34 @@ var (
 		[]string{"status", "method"},
 	)
 
-	CacheMemoryUsage = prometheus.NewGaugeFunc(
+	logger *slog.Logger
+)
+
+func InitMetrics(port string, cache *cache.CacheDecorator) {
+	prometheus.MustRegister(RequestsTotalMetric)
+	prometheus.MustRegister(HttpStatusMetric)
+
+	cacheMemoryUsage := prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{
 			Name: "cache_memory_usage_bytes",
 			Help: "Approximate amount of memory occupied by the cache in bytes",
 		},
 		func() float64 {
-			return float64(c.MemoryUsage())
+			return float64(cache.MemoryUsage())
 		},
 	)
+	prometheus.MustRegister(cacheMemoryUsage)
 
-	CacheSize = prometheus.NewGaugeFunc(
+	cacheSize := prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{
 			Name: "cache_items_count",
 			Help: "Number of items stored in the cache",
 		},
 		func() float64 {
-			return float64(c.Size())
+			return float64(cache.Size())
 		},
 	)
-
-	c *cache.CacheDecorator
-
-	logger *slog.Logger
-)
-
-// InitMetrics регистрирует метрики и запускает сервер для /metrics
-func InitMetrics(port string, cache *cache.CacheDecorator) {
-	c = cache
-	prometheus.MustRegister(RequestsTotalMetric)
-	prometheus.MustRegister(HttpStatusMetric)
-	prometheus.MustRegister(CacheMemoryUsage)
-	prometheus.MustRegister(CacheSize)
+	prometheus.MustRegister(cacheSize)
 
 	http.Handle("/metrics", promhttp.Handler())
 
@@ -73,19 +68,15 @@ func InitMetrics(port string, cache *cache.CacheDecorator) {
 			IdleTimeout:  120 * time.Second,
 		}
 		if err := server.ListenAndServe(); err != nil {
-			// slog не имеет метода Fatal, поэтому вручную выходим при критической ошибке
 			logger.Error("Failed to start metrics server", "error", errors.Wrap(err, ""))
-			os.Exit(1)
 		}
 	}()
 }
 
-// Увеличивает счётчик ответов с разбивкой по статусу и методу
 func HttpStatusMetricInc(statusCode int, method string) {
 	HttpStatusMetric.WithLabelValues(http.StatusText(statusCode), method).Inc()
 }
 
-// Счётчик общего числа запросов (можно вызывать из middleware)
 func RequestsTotalInc() {
 	RequestsTotalMetric.Inc()
 }

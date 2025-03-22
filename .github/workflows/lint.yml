@@ -2,9 +2,13 @@ name: Go Lint
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - cache
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - cache
+      - main
 
 jobs:
   golangci-lint:

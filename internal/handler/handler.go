@@ -1,31 +1,29 @@
 package handler
 
 import (
-	"net/http"
-	"strconv"
-	"log/slog" 
-	"context"
+	"crypto/internal/apperr"
 	"crypto/internal/models"
 	usecase "crypto/internal/usecase"
+	"errors"
+	"log/slog"
+	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
 	walletUC usecase.WalletProvider
-	ctx      context.Context
 }
-
 
 func New(walletUC usecase.WalletProvider) *Handler {
 	return &Handler{
 		walletUC: walletUC,
-		ctx:      context.Background(),
 	}
 }
 
 func (h *Handler) CreateAddressHandler(c *gin.Context) {
-	
+
 	var req models.AddressRequest
 
 	if err := c.BindJSON(&req); err != nil {
@@ -34,48 +32,57 @@ func (h *Handler) CreateAddressHandler(c *gin.Context) {
 		return
 	}
 
-	result, err := h.walletUC.CreateAddress(c.Request.Context(), &req) 
+	result, err := h.walletUC.CreateAddress(c, &req)
 	if err != nil {
 		slog.Error("Error", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-    c.JSON(http.StatusCreated, result)
+	c.JSON(http.StatusCreated, result)
 }
 
-func (h *Handler) GetIdHandler(c *gin.Context) {
-	
+func (h *Handler) GetIDHandler(c *gin.Context) {
+
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
+
 	if err != nil {
 		slog.Error("Failed to parse 'id' param", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	addr, err := h.walletUC.GetId(c.Request.Context(), id)
+	if id == 0 {
+		slog.Error("Invalid 'id' parame: must be greated than 0", "id", id)
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	addr, err := h.walletUC.GetID(c, id)
 	if err != nil {
+		if errors.Is(err, apperr.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		slog.Error("Error", "error", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, addr)
 }
 
-
 func (h *Handler) GetAllWalletsHandler(c *gin.Context) {
 
-	list, err := h.walletUC.GetAllWallets(c.Request.Context())
+	list, err := h.walletUC.GetAllWallets(c)
 	if err != nil {
 		slog.Error("Error", "error", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, list)
 }
-
 
 func (h *Handler) EditTagHandler(c *gin.Context) {
 
@@ -86,7 +93,7 @@ func (h *Handler) EditTagHandler(c *gin.Context) {
 		return
 	}
 
-	if err := h.walletUC.EditTag(c.Request.Context(), &req); err != nil {
+	if err := h.walletUC.EditTag(c, &req); err != nil {
 		slog.Error("Failed to update tag", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

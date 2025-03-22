@@ -1,17 +1,17 @@
 package storage
 
 import (
-	"log/slog"
-	"os"
-	"github.com/jackc/pgx/v5"
 	"context"
+	"log/slog"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func GetConnection(ctx context.Context) (*pgx.Conn, error) {
-	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+func GetConnection(ctx context.Context, url string) (*pgxpool.Pool, error) {
+	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
 		slog.Error("DB connection error", "error", err)
 		return nil, err
 	}
-	return conn, nil
+	return pool, nil
 }

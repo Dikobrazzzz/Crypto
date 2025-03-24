@@ -3,6 +3,7 @@ run:
 
 linters:
   enable:
+    - unused
     - errcheck
     - gosimple
     - govet

@@ -17,7 +17,7 @@ func NewPostgresWalletRepo(db *sql.DB) *PostgresWalletRepo {
 }
 
 func (p *PostgresWalletRepo) CreateAddress(ctx context.Context, req *models.AddressRequest) (*models.Address, error) {
-	query := `INSERT INTO addresses (wallet_address, chain_name, crypto_name, tag) VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	query := `INSERT INTO addresses (wallet_address, chain_name, crypto_name, tag) VALUES ($1, $2, $3, $4) RETURNING id`
 	var id uint64
 	err := p.db.QueryRowContext(ctx, query,
 		req.WalletAddress,

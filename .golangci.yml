@@ -8,7 +8,6 @@ run:
     - "**/vendor/**"
     - "**/pkg/mod/**"
   skip-files:
-    - "**/testdata/**"
     - "**/*_test.go"
 
 linters:

@@ -82,7 +82,7 @@ jobs:
           sleep 10
 
       - name: Set TEST_DATABASE_DSN env
-        run: echo "TEST_DATABASE_DSN=postgres://postgres:postgres@localhost:5432/test_db" >> $GITHUB_ENV
+        run: echo "TEST_DATABASE_DSN=postgres://postgres:postgres@localhost:5432/test_db?sslmode=disable" >> $GITHUB_ENV
 
       - name: Go mod download
         run: go mod download

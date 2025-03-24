@@ -18,7 +18,7 @@ import (
 var db *sql.DB
 
 func TestMain(m *testing.M) {
-	dsn := "postgres://postgres:postgres@localhost:5432/test_db"
+	dsn := "postgres://postgres:postgres@127.0.0.1:5432/test_db?sslmode=disable"
 
 	var err error
 	db, err = sql.Open("postgres", dsn)
@@ -30,10 +30,27 @@ func TestMain(m *testing.M) {
 		log.Fatalf("failed to ping DB: %v", err)
 	}
 
+	if err := createTables(); err != nil {
+		log.Fatalf("failed to create tables: %v", err)
+	}
+
 	code := m.Run()
 
 	_ = db.Close()
 	os.Exit(code)
+}
+
+func createTables() error {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS addresses (
+			id SERIAL PRIMARY KEY,
+			wallet_address TEXT NOT NULL,
+			chain_name TEXT NOT NULL,
+			crypto_name TEXT NOT NULL,
+			tag TEXT
+		)
+	`)
+	return err
 }
 
 func TestWalletUsecase_CreateAddress(t *testing.T) {

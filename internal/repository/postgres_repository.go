@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/internal/models"
 	"database/sql"
+
+	_ "github.com/lib/pq"
 )
 
 type PostgresWalletRepo struct {

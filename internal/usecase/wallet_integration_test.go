@@ -7,6 +7,7 @@ import (
 	"crypto/internal/usecase"
 	"database/sql"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,7 +15,7 @@ import (
 
 var db *sql.DB
 
-func TestDB(m *testing.M) {
+func TestMain(m *testing.M) {
 	dsn := "postgres://postgres:postgres@localhost:5432/test_db"
 
 	var err error
@@ -27,9 +28,10 @@ func TestDB(m *testing.M) {
 		log.Fatalf("failed to ping DB: %v", err)
 	}
 
-	m.Run()
+	code := m.Run()
 
 	_ = db.Close()
+	os.Exit(code)
 }
 
 func TestWalletUsecase_CreateAddress(t *testing.T) {

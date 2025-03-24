@@ -6,7 +6,9 @@ run:
   dir: .
   timeout: 5m
   skip-dirs:
-    - "/home/roman/go/pkg/mod/**"
+    - "glob:**/vendor/**"
+    - "glob:**/pkg/mod/**"
+
 
 linters:
   enable:

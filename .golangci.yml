@@ -3,7 +3,10 @@ linters-settings:
     check-exported: false
     exclude-use-default: false
 run:
+  dir: .
   timeout: 5m
+  skip-dirs:
+    - "/home/roman/go/pkg/mod/**"
 
 linters:
   enable:

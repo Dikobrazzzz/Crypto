@@ -2,15 +2,15 @@ package usecase
 
 import (
 	"context"
-	"crypto/internal/cache"
 	"crypto/internal/models"
+	"crypto/internal/repository"
 )
 
 type WalletUsecase struct {
-	WalletCache cache.WalletProvider
+	WalletCache repository.WalletProvider
 }
 
-func NewWalletProvider(cache cache.WalletProvider) *WalletUsecase {
+func NewWalletProvider(cache repository.WalletProvider) *WalletUsecase {
 	return &WalletUsecase{
 		WalletCache: cache,
 	}

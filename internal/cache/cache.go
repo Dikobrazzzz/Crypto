@@ -10,36 +10,32 @@ import (
 	"github.com/pkg/errors"
 )
 
-type wrapWallet struct {
+type WrapWallet struct {
 	wallet *models.Address
 	expiry time.Time
 	size   int64
 }
 
 type CacheDecorator struct {
-	walletRepo       repository.WalletProvider
-	allWallets       []models.Address
-	allWalletsCached bool
+	WalletRepo repository.WalletProvider
 
 	mu      sync.RWMutex
-	wallets map[uint64]wrapWallet
+	Wallets map[uint64]WrapWallet
 	ttl     time.Duration
 }
 
 func CacheNewDecorator(repo repository.WalletProvider, ttl time.Duration) *CacheDecorator {
 	return &CacheDecorator{
-		walletRepo:       repo,
-		wallets:          make(map[uint64]wrapWallet),
-		allWallets:       []models.Address{},
-		allWalletsCached: false,
-		ttl:              ttl,
+		WalletRepo: repo,
+		Wallets:    make(map[uint64]WrapWallet),
+		ttl:        ttl,
 	}
 }
 
 func (c *CacheDecorator) Get(id uint64) (*models.Address, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	wallet, ok := c.wallets[id]
+	wallet, ok := c.Wallets[id]
 
 	return wallet.wallet, ok
 }
@@ -50,7 +46,7 @@ func (c *CacheDecorator) Set(wallet *models.Address) {
 
 	walletSize := SizeCache(wallet)
 
-	c.wallets[wallet.ID] = wrapWallet{
+	c.Wallets[wallet.ID] = WrapWallet{
 		wallet: wallet,
 		expiry: time.Now().Add(c.ttl),
 		size:   walletSize,
@@ -58,7 +54,7 @@ func (c *CacheDecorator) Set(wallet *models.Address) {
 }
 
 func (c *CacheDecorator) CreateAddress(ctx context.Context, req *models.AddressRequest) (*models.Address, error) {
-	wallet, err := c.walletRepo.CreateAddress(ctx, req)
+	wallet, err := c.WalletRepo.CreateAddress(ctx, req)
 	if err != nil {
 		return nil, errors.Wrap(err, "The operation cannot be performed")
 	}
@@ -73,7 +69,7 @@ func (c *CacheDecorator) GetID(ctx context.Context, id uint64) (*models.Address,
 		return wallet, nil
 	}
 
-	wallet, err := c.walletRepo.GetID(ctx, id)
+	wallet, err := c.WalletRepo.GetID(ctx, id)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get wallet by id")
@@ -84,11 +80,11 @@ func (c *CacheDecorator) GetID(ctx context.Context, id uint64) (*models.Address,
 }
 
 func (c *CacheDecorator) GetAllWallets(ctx context.Context) ([]models.Address, error) {
-	return c.walletRepo.GetAllWallets(ctx)
+	return c.WalletRepo.GetAllWallets(ctx)
 }
 
 func (c *CacheDecorator) EditTag(ctx context.Context, req *models.TagUpdateRequest) error {
-	if err := c.walletRepo.EditTag(ctx, req); err != nil {
+	if err := c.WalletRepo.EditTag(ctx, req); err != nil {
 		return errors.Wrap(err, "Failed to edit tag")
 	}
 
@@ -105,9 +101,9 @@ func (c *CacheDecorator) removeExpired() {
 	defer c.mu.RUnlock()
 
 	now := time.Now()
-	for id, w := range c.wallets {
+	for id, w := range c.Wallets {
 		if now.After(w.expiry) {
-			delete(c.wallets, id)
+			delete(c.Wallets, id)
 		}
 	}
 }
@@ -130,7 +126,7 @@ func (c *CacheDecorator) StartCleaner(ctx context.Context) {
 func (c *CacheDecorator) Size() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return len(c.wallets)
+	return len(c.Wallets)
 }
 
 func (c *CacheDecorator) MemoryUsage() int64 {
@@ -138,7 +134,7 @@ func (c *CacheDecorator) MemoryUsage() int64 {
 	defer c.mu.RUnlock()
 
 	var totalsize int64
-	for _, w := range c.wallets {
+	for _, w := range c.Wallets {
 		totalsize += w.size
 	}
 	return totalsize

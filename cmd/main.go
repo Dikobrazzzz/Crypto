@@ -10,6 +10,7 @@ import (
 	"crypto/internal/app"
 	"crypto/internal/cache"
 	"crypto/internal/handler"
+	"crypto/internal/metrics"
 	"crypto/internal/repository"
 	"crypto/internal/storage"
 	"crypto/internal/usecase"
@@ -23,6 +24,7 @@ func loggerinit() {
 }
 
 func main() {
+
 	config.Init()
 	if err := database.Migrate(config.AppConfig.DatabaseURL); err != nil {
 		slog.Error("Migration failed", "error", err)
@@ -39,6 +41,7 @@ func main() {
 
 	walletRepo := repository.NewWalletProvider(pool)
 	cacheDecorator := cache.CacheNewDecorator(walletRepo, config.AppConfig.TTL)
+	metrics.InitMetrics("8081", cacheDecorator)
 	walletUC := usecase.NewWalletProvider(cacheDecorator)
 	handle := handler.New(walletUC)
 

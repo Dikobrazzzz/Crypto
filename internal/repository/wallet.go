@@ -98,7 +98,7 @@ func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error
 			&addr.Tag,
 			&addr.Balance,
 		); err != nil {
-			slog.Error("Rows scan error", "error", err)
+			slog.Error("Rows scan", "error", err)
 			return nil, err
 		}
 		list = append(list, addr)

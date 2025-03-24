@@ -55,7 +55,7 @@ func (h *Handler) GetIDHandler(c *gin.Context) {
 
 	if id == 0 {
 		slog.Error("Invalid 'id' parame: must be greated than 0", "id", id)
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 

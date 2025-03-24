@@ -1,13 +1,11 @@
 package metrics
 
 import (
-	"log/slog"
 	"net/http"
 	"time"
 
-	"crypto/internal/cache"
+	c "crypto/internal/cache"
 
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -27,11 +25,9 @@ var (
 		},
 		[]string{"status", "method"},
 	)
-
-	logger *slog.Logger
 )
 
-func InitMetrics(port string, cache *cache.CacheDecorator) {
+func InitMetrics(port string, cacheDecorator *c.CacheDecorator) {
 	prometheus.MustRegister(RequestsTotalMetric)
 	prometheus.MustRegister(HttpStatusMetric)
 
@@ -41,7 +37,7 @@ func InitMetrics(port string, cache *cache.CacheDecorator) {
 			Help: "Approximate amount of memory occupied by the cache in bytes",
 		},
 		func() float64 {
-			return float64(cache.MemoryUsage())
+			return float64(cacheDecorator.MemoryUsage())
 		},
 	)
 	prometheus.MustRegister(cacheMemoryUsage)
@@ -52,7 +48,7 @@ func InitMetrics(port string, cache *cache.CacheDecorator) {
 			Help: "Number of items stored in the cache",
 		},
 		func() float64 {
-			return float64(cache.Size())
+			return float64(cacheDecorator.Size())
 		},
 	)
 	prometheus.MustRegister(cacheSize)
@@ -60,17 +56,18 @@ func InitMetrics(port string, cache *cache.CacheDecorator) {
 	http.Handle("/metrics", promhttp.Handler())
 
 	go func() {
-		logger.Info("starting metrics server", "port", port)
-		server := &http.Server{
+		srv := &http.Server{
 			Addr:         ":" + port,
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 10 * time.Second,
 			IdleTimeout:  120 * time.Second,
 		}
-		if err := server.ListenAndServe(); err != nil {
-			logger.Error("Failed to start metrics server", "error", errors.Wrap(err, ""))
+
+		if err := srv.ListenAndServe(); err != nil {
+
 		}
 	}()
+
 }
 
 func HttpStatusMetricInc(statusCode int, method string) {

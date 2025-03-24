@@ -7,8 +7,6 @@ run:
   skip-dirs:
     - "**/vendor/**"
     - "**/pkg/mod/**"
-  skip-files:
-    - "**/*_test.go"
 
 linters:
   enable:

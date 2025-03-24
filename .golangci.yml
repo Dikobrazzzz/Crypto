@@ -4,8 +4,6 @@ linters-settings:
     exclude-use-default: false
 run:
   timeout: 5m
-  skip-dirs:
-    - "**/pkg/mod/**"
 
 linters:
   enable:

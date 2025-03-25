@@ -1,13 +1,8 @@
 issues:
-  exclude-rules:
-    - path: '^/go/pkg/mod/.*'
-      linters:
-        - all
-    - path: '^/opt/hostedtoolcache/go/.*'
-      linters:
-        - all
+  exclude-files:
+    - '^/go/pkg/mod/.*'
+    - '^/opt/hostedtoolcache/go/.*'
 run:
-  dir: .
   timeout: 5m
 
 

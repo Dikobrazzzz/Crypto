@@ -2,6 +2,7 @@ package config
 
 import (
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -18,5 +19,6 @@ var AppConfig Config
 func Init() {
 	if err := cleanenv.ReadEnv(&AppConfig); err != nil {
 		slog.Error("Error", "error", err)
+		os.Exit(1)
 	}
 }

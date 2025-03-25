@@ -27,7 +27,7 @@ var (
 	)
 )
 
-func InitMetrics(port string, cacheDecorator *c.CacheDecorator) {
+func Init(port string, cacheDecorator *c.CacheDecorator) {
 	prometheus.MustRegister(RequestsTotalMetric)
 	prometheus.MustRegister(HttpStatusMetric)
 

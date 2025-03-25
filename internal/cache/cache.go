@@ -18,10 +18,10 @@ type WrapWallet struct {
 
 type CacheDecorator struct {
 	WalletRepo repository.WalletProvider
+	ttl        time.Duration
 
 	mu      sync.RWMutex
 	Wallets map[uint64]WrapWallet
-	ttl     time.Duration
 }
 
 func CacheNewDecorator(repo repository.WalletProvider, ttl time.Duration) *CacheDecorator {
@@ -44,7 +44,7 @@ func (c *CacheDecorator) Set(wallet *models.Address) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	walletSize := SizeCache(wallet)
+	walletSize := sizeCache(wallet)
 
 	c.Wallets[wallet.ID] = WrapWallet{
 		wallet: wallet,
@@ -140,7 +140,7 @@ func (c *CacheDecorator) MemoryUsage() int64 {
 	return totalsize
 }
 
-func SizeCache(w *models.Address) int64 {
+func sizeCache(w *models.Address) int64 {
 	var size int64
 
 	size += 4

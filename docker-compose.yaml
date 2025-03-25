@@ -2,9 +2,7 @@ services:
   app:
     build: ./
     ports:
-      - "8080:8080"
-    expose:
-      - "8081"
+      - "8080"
     depends_on:
       db:
         condition: service_healthy
@@ -29,7 +27,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
-    - "9090:9090"
+    - "9090"
     depends_on:
       - app  
 
@@ -37,7 +35,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "3000"
     depends_on:
       - prometheus
 

@@ -1,7 +1,7 @@
-linters-settings:
-  unused:
-    check-exported: false
-    exclude-use-default: false
+issues:
+  exclude-rules:
+    - path: '^/go/pkg/mod/'
+    - path: '^/opt/hostedtoolcache/go/'
 run:
   dir: .
   timeout: 5m

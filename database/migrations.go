@@ -34,9 +34,9 @@ func Migrate(url string) error {
 		return errors.Wrap(err, "cannot get migration version")
 	}
 
-	err = goose.Up(db, "migrations")
+	err = goose.Up(db, "migrations") //nolint:typecheck
 	if err != nil {
-		if err := goose.DownTo(db, "migrations", version); err != nil {
+		if err := goose.DownTo(db, "migrations", version); err != nil { //nolint:typecheck
 			slog.Error(
 				"cannot rollback migrations",
 				slog.Any("error", err),

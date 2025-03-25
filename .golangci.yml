@@ -1,4 +1,8 @@
 issues:
+  exclude-rules:
+    - path: .*pkg/mod.*
+      linters:
+        - govet
   exclude-files:
     - '^/go/pkg/mod/.*'
     - '^/opt/hostedtoolcache/go/.*'

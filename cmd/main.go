@@ -41,7 +41,7 @@ func main() {
 
 	walletRepo := repository.NewWalletProvider(pool)
 	cacheDecorator := cache.CacheNewDecorator(walletRepo, config.AppConfig.TTL)
-	metrics.InitMetrics("9090", cacheDecorator)
+	metrics.InitMetrics(config.AppConfig.PortMetrics, cacheDecorator)
 	walletUC := usecase.NewWalletProvider(cacheDecorator)
 	handle := handler.New(walletUC)
 

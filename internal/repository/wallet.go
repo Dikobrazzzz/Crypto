@@ -65,7 +65,7 @@ func (w *WalletRepo) GetID(ctx context.Context, id uint64) (*models.Address, err
 	)
 
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) { //nolint:typecheck
 			return nil, apperr.ErrNotFound
 		}
 	}

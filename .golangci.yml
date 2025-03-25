@@ -2,16 +2,16 @@ issues:
   exclude-files:
     - '^/go/pkg/mod/.*'
     - '^/opt/hostedtoolcache/go/.*'
-linters:
-  exclusions:
-    rules:
-      - path: database/migrations.go
-        text: "goose"
+  
 run:
   timeout: 5m
 
 
 linters:
+  exclusions:
+    rules:
+      - path: database/migrations.go
+        text: "goose"
   enable:
     - unused
     - errcheck

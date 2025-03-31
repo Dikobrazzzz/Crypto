@@ -1,18 +1,11 @@
 issues:
-  exclude-dirs:
-    - pkg/mod           # Exclude dependency cache
-    - opt/hostedtoolcache  # Exclude Go toolchain directory in GitHub Actions
   exclude-rules:
     - path: .*pkg/mod.*
       linters:
-        - govet         # Adjust based on the linters you use
-        - staticcheck
-        - unused
+        - typecheck
     - path: .*opt/hostedtoolcache.*
       linters:
-        - govet
-        - staticcheck
-        - unused
+        - typecheck
   
 run:
   timeout: 5m

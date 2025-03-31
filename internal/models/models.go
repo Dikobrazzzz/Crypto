@@ -1,8 +1,4 @@
-package models 
-
-import (
-
-) 
+package models
 
 type AddressRequest struct {
 	WalletAddress string `json:"walletAddress"`

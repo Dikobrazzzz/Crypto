@@ -14,16 +14,23 @@ import (
 	"crypto/internal/repository"
 	"crypto/internal/storage"
 	"crypto/internal/usecase"
+	provider "crypto/trace"
 )
 
 func loggerinit() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		Level:     config.AppConfig.Level,
+		Level:     config.AppConfig.Rlevel,
 		AddSource: true,
 	})))
 }
 
 func main() {
+
+	tp, err := provider.InitTracer()
+	if err != nil {
+		slog.Error("Error creating trace", "error", err)
+	}
+	defer tp.Shutdown(context.Background())
 
 	config.Init()
 	if err := database.Migrate(config.AppConfig.DatabaseURL); err != nil {

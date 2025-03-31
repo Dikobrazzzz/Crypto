@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
 )
 
 type WalletRepo struct {
@@ -21,6 +22,10 @@ func NewWalletProvider(pool *pgxpool.Pool) *WalletRepo {
 
 func (w *WalletRepo) CreateAddress(ctx context.Context, req *models.AddressRequest) (*models.Address, error) {
 
+	tracer := otel.Tracer("Crypto-api")
+	ctx, span := tracer.Start(ctx, "CreateAddress")
+	defer span.End()
+
 	insertSQL := `
     INSERT INTO wallet (wallet_address, chain_name, crypto_name, tag, balance)
     VALUES ($1, $2, $3, $4, $5)
@@ -32,6 +37,7 @@ func (w *WalletRepo) CreateAddress(ctx context.Context, req *models.AddressReque
 		req.WalletAddress, req.ChainName, req.CryptoName, req.Tag, 0,
 	).Scan(&newID)
 	if err != nil {
+		span.RecordError(err)
 		slog.Error("Failed to insert into table", "error", err)
 		return nil, err
 	}
@@ -47,6 +53,10 @@ func (w *WalletRepo) CreateAddress(ctx context.Context, req *models.AddressReque
 }
 
 func (w *WalletRepo) GetID(ctx context.Context, id uint64) (*models.Address, error) {
+
+	tracer := otel.Tracer("Crypto-api")
+	ctx, span := tracer.Start(ctx, "GetID")
+	defer span.End()
 
 	var addr models.Address
 
@@ -65,6 +75,7 @@ func (w *WalletRepo) GetID(ctx context.Context, id uint64) (*models.Address, err
 	)
 
 	if err != nil {
+		span.RecordError(err)
 		if errors.Is(err, pgx.ErrNoRows) { //nolint:typecheck
 			return nil, apperr.ErrNotFound
 		}
@@ -75,6 +86,10 @@ func (w *WalletRepo) GetID(ctx context.Context, id uint64) (*models.Address, err
 
 func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error) {
 
+	tracer := otel.Tracer("Crypto-api")
+	ctx, span := tracer.Start(ctx, "GetAllWallets")
+	defer span.End()
+
 	query := `
 		SELECT id, wallet_address, chain_name, crypto_name, tag, balance
 		FROM wallet
@@ -82,6 +97,7 @@ func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error
 
 	rows, err := w.pool.Query(ctx, query)
 	if err != nil {
+		span.RecordError(err)
 		slog.Error("Query failed", "error", err)
 		return nil, errors.Wrap(err, "GetAllWallets Query")
 	}
@@ -98,6 +114,7 @@ func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error
 			&addr.Tag,
 			&addr.Balance,
 		); err != nil {
+			span.RecordError(err)
 			slog.Error("Rows scan", "error", err)
 			return nil, err
 		}
@@ -105,6 +122,7 @@ func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error
 
 	}
 	if err := rows.Err(); err != nil {
+		span.RecordError(err)
 		slog.Error("Rows error", "error", err)
 		return nil, err
 	}
@@ -114,6 +132,10 @@ func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error
 
 func (w *WalletRepo) EditTag(ctx context.Context, req *models.TagUpdateRequest) error {
 
+	tracer := otel.Tracer("Crypto-api")
+	ctx, span := tracer.Start(ctx, "EditTag")
+	defer span.End()
+
 	query := `
         UPDATE wallet
         SET tag = $1
@@ -122,11 +144,13 @@ func (w *WalletRepo) EditTag(ctx context.Context, req *models.TagUpdateRequest) 
 
 	result, err := w.pool.Exec(ctx, query, req.Tag, req.ID)
 	if err != nil {
+		span.RecordError(err)
 		slog.Error("Update failed", "error", err)
 		return err
 	}
 
 	if result.RowsAffected() == 0 {
+		span.RecordError(err)
 		slog.Error("No rows were affected by the update")
 		return err
 	}

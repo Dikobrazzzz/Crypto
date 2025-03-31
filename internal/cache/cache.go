@@ -6,6 +6,7 @@ import (
 	"crypto/internal/repository"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/pkg/errors"
 )
@@ -141,13 +142,7 @@ func (c *CacheDecorator) MemoryUsage() int64 {
 }
 
 func sizeCache(w *models.Address) int64 {
-	var size int64
-
-	size += 4
-	size += int64(len(w.WalletAddress))
-	size += int64(len(w.ChainName))
-	size += int64(len(w.CryptoName))
-	size += int64(len(w.Tag))
-	size += 16
-	return size
+	structSize := int64(unsafe.Sizeof(*w))
+	stringSizes := int64(len(w.WalletAddress) + len(w.ChainName) + len(w.CryptoName) + len(w.Tag))
+	return structSize + stringSizes
 }

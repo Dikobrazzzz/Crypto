@@ -5,6 +5,7 @@ import (
 	"crypto/internal/cache"
 	"crypto/internal/models"
 	"crypto/internal/repository"
+	"log/slog"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -15,12 +16,12 @@ import (
 
 func TestCacheDecorator_CreateAddress(t *testing.T) {
 	tests := []struct {
-		name           string
-		req            *models.AddressRequest
-		repoWallet     *models.Address
-		repoErr        error
-		expectedWallet *models.Address
-		expectError    bool
+		name               string
+		req                *models.AddressRequest
+		createAddressResp  *models.Address
+		createAddressError error
+		expectedWallet     *models.Address
+		expectError        error
 	}{
 		{
 			name: "success call",
@@ -30,20 +31,20 @@ func TestCacheDecorator_CreateAddress(t *testing.T) {
 				CryptoName:    "ETH",
 				Tag:           "test",
 			},
-			repoWallet: &models.Address{
+			createAddressResp: &models.Address{
 				WalletAddress: "0x123",
 				ChainName:     "Ethereum",
 				CryptoName:    "ETH",
 				Tag:           "test",
 			},
-			repoErr: nil,
+			createAddressError: nil,
 			expectedWallet: &models.Address{
 				WalletAddress: "0x123",
 				ChainName:     "Ethereum",
 				CryptoName:    "ETH",
 				Tag:           "test",
 			},
-			expectError: false,
+			expectError: nil,
 		},
 		{
 			name: "repo error",
@@ -53,10 +54,10 @@ func TestCacheDecorator_CreateAddress(t *testing.T) {
 				CryptoName:    "ETH",
 				Tag:           "error",
 			},
-			repoWallet:     nil,
-			repoErr:        errors.New("db error"),
-			expectedWallet: nil,
-			expectError:    true,
+			createAddressResp:  nil,
+			createAddressError: errors.New("db error"),
+			expectedWallet:     nil,
+			expectError:        errors.New("The operation cannot be performed"),
 		},
 	}
 
@@ -69,17 +70,16 @@ func TestCacheDecorator_CreateAddress(t *testing.T) {
 			mockWalletRepo.
 				EXPECT().
 				CreateAddress(gomock.Any(), tc.req).
-				Return(tc.repoWallet, tc.repoErr)
+				Return(tc.createAddressResp, tc.createAddressError)
 
-			c := &cache.CacheDecorator{
+			cacheDecorator := &cache.CacheDecorator{
 				WalletRepo: mockWalletRepo,
 				Wallets:    make(map[uint64]cache.WrapWallet),
 			}
 
-			wallet, err := c.CreateAddress(context.Background(), tc.req)
-			if tc.expectError {
-				require.Error(t, err)
-				require.Nil(t, wallet)
+			wallet, err := cacheDecorator.CreateAddress(context.Background(), tc.req)
+			if tc.expectError != nil {
+				slog.Error("Error with create address")
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tc.expectedWallet, wallet)

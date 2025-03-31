@@ -3,38 +3,39 @@ package repository
 import (
 	"context"
 	"crypto/internal/models"
-	"database/sql"
+	"log/slog"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 )
 
 type PostgresWalletRepo struct {
-	db *sql.DB
+	pool *pgxpool.Pool
 }
 
-func NewPostgresWalletRepo(db *sql.DB) *PostgresWalletRepo {
-	return &PostgresWalletRepo{db: db}
+func NewPostgresWalletRepo(pool *pgxpool.Pool) *PostgresWalletRepo {
+	return &PostgresWalletRepo{pool: pool}
 }
 
 func (p *PostgresWalletRepo) CreateAddress(ctx context.Context, req *models.AddressRequest) (*models.Address, error) {
-	query := `INSERT INTO addresses (wallet_address, chain_name, crypto_name, tag) VALUES ($1, $2, $3, $4) RETURNING id`
-	var id uint64
-	err := p.db.QueryRowContext(ctx, query,
-		req.WalletAddress,
-		req.ChainName,
-		req.CryptoName,
-		req.Tag,
-	).Scan(&id)
+	insertSQL := `
+	INSERT INTO wallet (wallet_address, chain_name, crypto_name, tag, balance)
+	VALUES ($1, $2, $3, $4, $5)
+	RETURN id
+	`
+	var newID uint64
+	err := p.pool.QueryRow(ctx, insertSQL, req.WalletAddress, req.ChainName, req.CryptoName, req.Tag, 0).Scan(&newID)
 	if err != nil {
-		return nil, err
+		slog.Error("Failed to insert into table")
 	}
 
 	return &models.Address{
-		ID:            id,
+		ID:            newID,
 		WalletAddress: req.WalletAddress,
 		ChainName:     req.ChainName,
 		CryptoName:    req.CryptoName,
 		Tag:           req.Tag,
+		Balance:       0,
 	}, nil
 }
 

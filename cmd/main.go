@@ -19,7 +19,7 @@ import (
 
 func loggerinit() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		Level:     config.AppConfig.Rlevel,
+		Level:     config.AppConfig.LogLevel,
 		AddSource: true,
 	})))
 }
@@ -32,7 +32,11 @@ func main() {
 	}
 	defer tp.Shutdown(context.Background())
 
-	config.Init()
+	if err := config.Init(); err != nil {
+		slog.Error("Initialisation error", "error", err)
+		os.Exit(1)
+	}
+
 	if err := database.Migrate(config.AppConfig.DatabaseURL); err != nil {
 		slog.Error("Migration failed", "error", err)
 		os.Exit(1)

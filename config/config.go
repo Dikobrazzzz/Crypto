@@ -2,7 +2,6 @@ package config
 
 import (
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -13,26 +12,15 @@ type Config struct {
 	TTL         time.Duration `env:"TTL" env-default:"5m"`
 	Level       string        `env:"Level" env-default:"debug"`
 	PortMetrics string        `env:"PortMetrics" env-default:"9090"`
-	Rlevel      slog.Level
+	LogLevel    slog.Level
 }
 
 var AppConfig Config
 
-func Init() {
+func Init() error {
 	if err := cleanenv.ReadEnv(&AppConfig); err != nil {
 		slog.Error("Error", "error", err)
-		os.Exit(1)
+		return err
 	}
-
-	switch AppConfig.Level {
-	case "debug":
-		AppConfig.Rlevel = slog.LevelDebug
-	case "info":
-		AppConfig.Rlevel = slog.LevelInfo
-	case "error":
-		AppConfig.Rlevel = slog.LevelError
-	default:
-		slog.Error("Invalid log error")
-		os.Exit(1)
-	}
+	return nil
 }

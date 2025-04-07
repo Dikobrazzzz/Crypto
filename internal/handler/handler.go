@@ -11,23 +11,31 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Handler struct {
 	walletUC usecase.WalletProvider
+	Instrumentation
+}
+
+type Instrumentation struct {
+	tracer trace.Tracer
 }
 
 func New(walletUC usecase.WalletProvider) *Handler {
 	return &Handler{
 		walletUC: walletUC,
+		Instrumentation: Instrumentation{
+			tracer: otel.Tracer("API service"),
+		},
 	}
 }
 
 func (h *Handler) CreateAddressHandler(c *gin.Context) {
 
 	ctx := c.Request.Context()
-	tracer := otel.Tracer("Crypto-api")
-	ctx, span := tracer.Start(ctx, "CreateAddress")
+	ctx, span := h.tracer.Start(ctx, "CreateAddress")
 	defer span.End()
 
 	c.Request = c.Request.WithContext(ctx)
@@ -35,7 +43,6 @@ func (h *Handler) CreateAddressHandler(c *gin.Context) {
 	var req models.AddressRequest
 
 	if err := c.BindJSON(&req); err != nil {
-		span.RecordError(err)
 		slog.Error("Failed to bind JSON request", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -43,7 +50,6 @@ func (h *Handler) CreateAddressHandler(c *gin.Context) {
 
 	result, err := h.walletUC.CreateAddress(ctx, &req)
 	if err != nil {
-		span.RecordError(err)
 		slog.Error("Error", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -55,8 +61,7 @@ func (h *Handler) CreateAddressHandler(c *gin.Context) {
 func (h *Handler) GetIDHandler(c *gin.Context) {
 
 	ctx := c.Request.Context()
-	tracer := otel.Tracer("Crypto-api")
-	ctx, span := tracer.Start(ctx, "GetID")
+	ctx, span := h.tracer.Start(ctx, "GetID")
 	defer span.End()
 
 	c.Request = c.Request.WithContext(ctx)
@@ -65,14 +70,12 @@ func (h *Handler) GetIDHandler(c *gin.Context) {
 	id, err := strconv.ParseUint(idStr, 10, 64)
 
 	if err != nil {
-		span.RecordError(err)
 		slog.Error("Failed to parse 'id' param", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if id == 0 {
-		span.RecordError(err)
 		slog.Error("Invalid 'id' parame: must be greated than 0", "id", id)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -81,11 +84,9 @@ func (h *Handler) GetIDHandler(c *gin.Context) {
 	addr, err := h.walletUC.GetID(ctx, id)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNotFound) {
-			span.RecordError(err)
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		span.RecordError(err)
 		slog.Error("Error", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -97,15 +98,13 @@ func (h *Handler) GetIDHandler(c *gin.Context) {
 func (h *Handler) GetAllWalletsHandler(c *gin.Context) {
 
 	ctx := c.Request.Context()
-	tracer := otel.Tracer("Crypto-api")
-	ctx, span := tracer.Start(ctx, "GetAllWallets")
+	ctx, span := h.tracer.Start(ctx, "GetAllWallets")
 	defer span.End()
 
 	c.Request = c.Request.WithContext(ctx)
 
 	list, err := h.walletUC.GetAllWallets(ctx)
 	if err != nil {
-		span.RecordError(err)
 		slog.Error("Error", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -116,22 +115,19 @@ func (h *Handler) GetAllWalletsHandler(c *gin.Context) {
 func (h *Handler) EditTagHandler(c *gin.Context) {
 
 	ctx := c.Request.Context()
-	tracer := otel.Tracer("Crypto-api")
-	ctx, span := tracer.Start(ctx, "EditTag")
+	ctx, span := h.tracer.Start(ctx, "EditTag")
 	defer span.End()
 
 	c.Request = c.Request.WithContext(ctx)
 
 	var req models.TagUpdateRequest
 	if err := c.BindJSON(&req); err != nil {
-		span.RecordError(err)
 		slog.Error("Failed to bind JSON for tag update", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := h.walletUC.EditTag(ctx, &req); err != nil {
-		span.RecordError(err)
 		slog.Error("Failed to update tag", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

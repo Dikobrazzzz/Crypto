@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -27,7 +28,7 @@ var (
 	)
 )
 
-func Init(port string, cacheDecorator *c.CacheDecorator) {
+func Init(port string, cacheDecorator *c.CacheDecorator) error {
 	prometheus.MustRegister(RequestsTotalMetric)
 	prometheus.MustRegister(HttpStatusMetric)
 
@@ -55,7 +56,7 @@ func Init(port string, cacheDecorator *c.CacheDecorator) {
 
 	http.Handle("/metrics", promhttp.Handler())
 
-	go func() {
+	go func() error {
 		srv := &http.Server{
 			Addr:         ":" + port,
 			ReadTimeout:  5 * time.Second,
@@ -64,10 +65,12 @@ func Init(port string, cacheDecorator *c.CacheDecorator) {
 		}
 
 		if err := srv.ListenAndServe(); err != nil {
-
+			slog.Error("Error with start metrics")
+			return err
 		}
+		return nil
 	}()
-
+	return nil
 }
 
 func HttpStatusMetricInc(statusCode int, method string) {

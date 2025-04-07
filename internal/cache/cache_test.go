@@ -80,6 +80,7 @@ func TestCacheDecorator_CreateAddress(t *testing.T) {
 			wallet, err := cacheDecorator.CreateAddress(context.Background(), tc.req)
 			if tc.expectError != nil {
 				slog.Error("Error with create address")
+				assert.EqualError(t, err, tc.expectError.Error())
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tc.expectedWallet, wallet)

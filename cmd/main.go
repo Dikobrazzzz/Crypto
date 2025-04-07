@@ -13,8 +13,8 @@ import (
 	"crypto/internal/metrics"
 	"crypto/internal/repository"
 	"crypto/internal/storage"
+	provider "crypto/internal/trace"
 	"crypto/internal/usecase"
-	provider "crypto/trace"
 )
 
 func loggerinit() {
@@ -26,7 +26,7 @@ func loggerinit() {
 
 func main() {
 
-	tp, err := provider.InitTracer()
+	tp, err := provider.InitTracer("API Service")
 	if err != nil {
 		slog.Error("Error creating trace", "error", err)
 	}
@@ -52,7 +52,12 @@ func main() {
 
 	walletRepo := repository.NewWalletProvider(pool)
 	cacheDecorator := cache.CacheNewDecorator(walletRepo, config.AppConfig.TTL)
-	metrics.Init(config.AppConfig.PortMetrics, cacheDecorator)
+
+	if err := metrics.Init(config.AppConfig.PortMetrics, cacheDecorator); err != nil {
+		slog.Error("Initialisation metrics error", "error", err)
+		os.Exit(1)
+	}
+
 	walletUC := usecase.NewWalletProvider(cacheDecorator)
 	handle := handler.New(walletUC)
 

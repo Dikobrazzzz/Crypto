@@ -10,10 +10,10 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
 
-func InitTracer() (*trace.TracerProvider, error) {
+func InitTracer(ServiceName string) (*trace.TracerProvider, error) {
 	exporter, err := jaeger.New(
 		jaeger.WithCollectorEndpoint(
-			jaeger.WithEndpoint("http://localhost:14268/api/traces"),
+			jaeger.WithEndpoint("http://jaeger:14268/api/traces"),
 		),
 	)
 	if err != nil {
@@ -21,8 +21,14 @@ func InitTracer() (*trace.TracerProvider, error) {
 	}
 
 	tp := trace.NewTracerProvider(
+		trace.WithSampler(trace.AlwaysSample()),
 		trace.WithBatcher(exporter),
-		trace.WithResource(resource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceNameKey.String("Crypto-api"))),
+		trace.WithResource(
+			resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.ServiceNameKey.String(ServiceName),
+			),
+		),
 	)
 	otel.SetTracerProvider(tp)
 	return tp, nil

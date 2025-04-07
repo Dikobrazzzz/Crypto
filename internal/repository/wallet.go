@@ -10,20 +10,31 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type WalletRepo struct {
 	pool *pgxpool.Pool
+	Instrumentation
+}
+
+type Instrumentation struct {
+	tracer trace.Tracer
 }
 
 func NewWalletProvider(pool *pgxpool.Pool) *WalletRepo {
-	return &WalletRepo{pool: pool}
+	return &WalletRepo{
+		pool: pool,
+		Instrumentation: Instrumentation{
+			tracer: otel.Tracer("API service"),
+		},
+	}
+
 }
 
 func (w *WalletRepo) CreateAddress(ctx context.Context, req *models.AddressRequest) (*models.Address, error) {
 
-	tracer := otel.Tracer("Crypto-api")
-	ctx, span := tracer.Start(ctx, "CreateAddress")
+	ctx, span := w.tracer.Start(ctx, "CreateAddress")
 	defer span.End()
 
 	insertSQL := `
@@ -54,8 +65,7 @@ func (w *WalletRepo) CreateAddress(ctx context.Context, req *models.AddressReque
 
 func (w *WalletRepo) GetID(ctx context.Context, id uint64) (*models.Address, error) {
 
-	tracer := otel.Tracer("Crypto-api")
-	ctx, span := tracer.Start(ctx, "GetID")
+	ctx, span := w.tracer.Start(ctx, "GetID")
 	defer span.End()
 
 	var addr models.Address
@@ -86,8 +96,7 @@ func (w *WalletRepo) GetID(ctx context.Context, id uint64) (*models.Address, err
 
 func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error) {
 
-	tracer := otel.Tracer("Crypto-api")
-	ctx, span := tracer.Start(ctx, "GetAllWallets")
+	ctx, span := w.tracer.Start(ctx, "GetAllWallets")
 	defer span.End()
 
 	query := `
@@ -132,8 +141,7 @@ func (w *WalletRepo) GetAllWallets(ctx context.Context) ([]models.Address, error
 
 func (w *WalletRepo) EditTag(ctx context.Context, req *models.TagUpdateRequest) error {
 
-	tracer := otel.Tracer("Crypto-api")
-	ctx, span := tracer.Start(ctx, "EditTag")
+	ctx, span := w.tracer.Start(ctx, "EditTag")
 	defer span.End()
 
 	query := `
@@ -144,13 +152,11 @@ func (w *WalletRepo) EditTag(ctx context.Context, req *models.TagUpdateRequest) 
 
 	result, err := w.pool.Exec(ctx, query, req.Tag, req.ID)
 	if err != nil {
-		span.RecordError(err)
 		slog.Error("Update failed", "error", err)
 		return err
 	}
 
 	if result.RowsAffected() == 0 {
-		span.RecordError(err)
 		slog.Error("No rows were affected by the update")
 		return err
 	}

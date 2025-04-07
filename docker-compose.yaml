@@ -49,7 +49,7 @@ services:
     container_name: jaeger
     ports:
       - "16686:16686"
-      - "14268:14268" 
+      - "14268:14268"
       - "6831:6831/udp"
     depends_on:
       - app

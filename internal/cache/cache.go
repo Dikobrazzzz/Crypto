@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/internal/models"
 	"crypto/internal/repository"
+	"strconv"
 	"sync"
 	"time"
 	"unsafe"
@@ -45,7 +46,7 @@ func (c *CacheDecorator) Set(wallet *models.Address) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	walletSize := sizeCache(wallet)
+	walletSize := c.sizeCache()
 
 	c.Wallets[wallet.ID] = WrapWallet{
 		wallet: wallet,
@@ -141,8 +142,49 @@ func (c *CacheDecorator) MemoryUsage() int64 {
 	return totalsize
 }
 
-func sizeCache(w *models.Address) int64 {
-	structSize := int64(unsafe.Sizeof(*w))
-	stringSizes := int64(len(w.WalletAddress) + len(w.ChainName) + len(w.CryptoName) + len(w.Tag))
-	return structSize + stringSizes
+func (c *CacheDecorator) copy(copyTtl time.Duration, copyWalletRepo repository.WalletProvider) *CacheDecorator {
+	copyWallets := make(map[uint64]WrapWallet)
+	for k, v := range c.Wallets {
+		copyWallets[k] = WrapWallet{
+			wallet: &models.Address{
+				ID:            v.wallet.ID,
+				WalletAddress: v.wallet.WalletAddress,
+				ChainName:     v.wallet.ChainName,
+				CryptoName:    v.wallet.CryptoName,
+				Tag:           v.wallet.Tag,
+				Balance:       v.wallet.Balance,
+			},
+			expiry: v.expiry,
+			size:   v.size,
+		}
+	}
+
+	return &CacheDecorator{
+		WalletRepo: copyWalletRepo,
+		ttl:        copyTtl,
+		Wallets:    copyWallets,
+	}
+}
+
+func (c *CacheDecorator) sizeCache() int64 {
+	replica := c.copy(c.ttl, c.WalletRepo)
+
+	var size int64
+
+	size += int64(unsafe.Sizeof(*replica))
+
+	size += int64(unsafe.Sizeof(replica.Wallets))
+	for k, v := range replica.Wallets {
+		size += int64(int64(unsafe.Sizeof(k)) + int64(unsafe.Sizeof(v)))
+		if v.wallet != nil {
+			size += int64(unsafe.Sizeof(v.wallet))
+			size += int64(len(strconv.FormatUint(v.wallet.ID, 10)))
+			size += int64(len(v.wallet.WalletAddress))
+			size += int64(len(v.wallet.ChainName))
+			size += int64(len(v.wallet.CryptoName))
+			size += int64(len(v.wallet.Tag))
+			size += int64(len(strconv.FormatInt(v.wallet.Balance, 10)))
+		}
+	}
+	return size
 }
